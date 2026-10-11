@@ -1,0 +1,26 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# editors / OS
+.idea/
+.vscode/
+.DS_Store

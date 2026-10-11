@@ -1,0 +1,20 @@
+{
+  "name": "codemind-ai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.6"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @codemind/web",
+    "build:web": "npm run build -w @codemind/web",
+    "test:web": "npm run test -w @codemind/web",
+    "lint:web": "npm run lint -w @codemind/web",
+    "typecheck:web": "npm run typecheck -w @codemind/web",
+    "gen:api": "cd apps/api && .venv/bin/python -m app.cli export-openapi ../../packages/shared/openapi.json && cd ../.. && npm run gen:api -w @codemind/shared"
+  }
+}

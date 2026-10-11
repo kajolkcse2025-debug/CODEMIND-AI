@@ -1,0 +1,18 @@
+{
+  "name": "@codemind/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "gen:api": "openapi-typescript openapi.json -o src/api.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.9.0"
+  }
+}

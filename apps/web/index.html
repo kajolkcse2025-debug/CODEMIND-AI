@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="CodeMind AI: a coding mentor that adapts to how you practice."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <title>CodeMind AI</title>
+    <script>
+      // Apply the saved theme before first paint (dark is the default) to avoid a flash.
+      try {
+        var t = localStorage.getItem("codemind-theme") || "dark";
+        var dark =
+          t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
