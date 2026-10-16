@@ -41,6 +41,8 @@ and only in a later phase.
 | No vendor AI SDK is imported anywhere | `tests/unit/test_architecture.py` |
 | Frontend never calls `fetch` outside the API client | ESLint `no-restricted-globals` |
 | Identity comes only from a verified token | `tests/api/test_auth_and_me.py` |
+| The committed OpenAPI schema (and generated TS types) match the app | `test_committed_openapi_schema_matches_the_running_app` |
+| `docs/database.md` lists every table | `test_committed_database_docs_list_every_table` |
 | Unverified results never count | `RunResult.counts_toward_metrics`, `analytics.verified_only`, DB `CHECK unavailable_is_unverified`, and their tests |
 
 ## Authentication flow
@@ -53,6 +55,17 @@ and only in a later phase.
 4. `get_current_user` provisions the application user with a race-safe
    `INSERT ... ON CONFLICT` keyed by the verified Firebase uid. No endpoint accepts a user id.
 5. Accounts marked `pending_deletion` get `403 account_pending_deletion`.
+
+## Concurrency rules
+
+Found and fixed during verification, each with a regression test (`tests/integration/test_concurrency.py`,
+`tests/unit/test_security.py`):
+
+- Lazy Firebase app initialisation is serialised with a lock and tolerates another initialiser.
+- A duplicate `POST /profile` is decided by the primary key and mapped to `409`, never `500`.
+- Skill upserts insert in sorted order and never update existing rows, so concurrent writers cannot
+  deadlock (PostgreSQL 40P01).
+- First-request user provisioning is a single `INSERT ... ON CONFLICT`.
 
 ## The three seams
 

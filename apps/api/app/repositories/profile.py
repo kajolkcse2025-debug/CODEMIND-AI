@@ -46,17 +46,23 @@ class ProfileRepository:
 
     def replace_skills(self, user_id: uuid.UUID, names: Sequence[str]) -> None:
         self._session.execute(delete(UserSkill).where(UserSkill.user_id == user_id))
-        by_slug = {skill_slug(name): name for name in names if skill_slug(name)}
+        by_slug: dict[str, str] = {}
+        for name in names:
+            slug = skill_slug(name)
+            if slug:
+                by_slug.setdefault(slug, name)  # first spelling wins within one call
         if not by_slug:
             return
-        upsert = insert(Skill).values(
-            [{"slug": slug, "name": name} for slug, name in by_slug.items()]
+        # Insert in a fixed (sorted) order and never UPDATE existing rows. Two requests that
+        # insert the same skills in opposite orders and take row locks in opposite orders can
+        # deadlock (PostgreSQL error 40P01); a stress test hit this in ~8% of concurrent writes.
+        slugs = sorted(by_slug)
+        self._session.execute(
+            insert(Skill)
+            .values([{"slug": slug, "name": by_slug[slug]} for slug in slugs])
+            .on_conflict_do_nothing(index_elements=[Skill.slug])
         )
-        # Keep the first-seen display name for a slug; only ensure the row exists.
-        upsert = upsert.on_conflict_do_update(
-            index_elements=[Skill.slug], set_={"slug": upsert.excluded.slug}
-        )
-        skill_ids = self._session.scalars(upsert.returning(Skill.id))
+        skill_ids = self._session.scalars(select(Skill.id).where(Skill.slug.in_(slugs))).all()
         self._session.execute(
             insert(UserSkill),
             [{"user_id": user_id, "skill_id": skill_id} for skill_id in skill_ids],

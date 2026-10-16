@@ -35,8 +35,8 @@ export function renderWithProviders(ui: ReactElement, auth: Partial<AuthContextV
   );
 }
 
-export function renderRoute(path: string, auth: Partial<AuthContextValue> = {}) {
-  const router = createTestRouter([path]);
+export function renderRoute(path: string, auth: Partial<AuthContextValue> = {}, state?: unknown) {
+  const router = createTestRouter([{ pathname: path, state }]);
   const result = renderWithProviders(<RouterProvider router={router} />, auth);
   return { ...result, router };
 }

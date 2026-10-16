@@ -8,16 +8,16 @@ import { useAuth } from "@/features/auth/auth-context";
 
 const principles = [
   {
-    title: "Numbers come from code",
-    body: "Scores are computed by deterministic logic you can audit. AI explains and coaches. It never grades you.",
+    title: "Numbers will come from code",
+    body: "Scores are being built as deterministic logic you can audit. AI will explain and coach. It will never grade you.",
   },
   {
     title: "Honest about uncertainty",
-    body: "When there is not enough evidence, CodeMind says so instead of inventing a number.",
+    body: "When there is not enough evidence, CodeMind will say so instead of inventing a number.",
   },
   {
-    title: "Only verified work counts",
-    body: "Results that were not checked by a real code runner never affect your progress.",
+    title: "Only verified work will count",
+    body: "Results that a real code runner did not check will never affect your progress.",
   },
 ];
 
@@ -62,7 +62,7 @@ export function LandingPage() {
           </div>
         </section>
         <section
-          aria-label="Principles"
+          aria-label="Design principles"
           className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3"
         >
           {principles.map((item, index) => (

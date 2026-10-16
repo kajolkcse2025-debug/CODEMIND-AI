@@ -8,6 +8,7 @@ import base64
 import binascii
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Protocol
@@ -41,12 +42,26 @@ class TokenVerifier(Protocol):
     def verify(self, token: str) -> VerifiedToken: ...
 
 
-def _ensure_firebase_app(settings: Settings) -> firebase_admin.App:
-    try:
-        return firebase_admin.get_app()
-    except ValueError:
-        pass
+# Web servers handle the first requests concurrently. "Is there an app? No -> create one" is a
+# check-then-act sequence, so it must be serialised (a stress test showed ~0.15% of concurrent
+# first calls otherwise failed with "The default Firebase app already exists").
+_init_lock = threading.Lock()
 
+
+def _ensure_firebase_app(settings: Settings) -> firebase_admin.App:
+    with _init_lock:
+        try:
+            return firebase_admin.get_app()
+        except ValueError:
+            pass
+        try:
+            return _initialize_firebase_app(settings)
+        except ValueError:
+            # Something else initialised the default app between our check and our call.
+            return firebase_admin.get_app()
+
+
+def _initialize_firebase_app(settings: Settings) -> firebase_admin.App:
     if settings.firebase_emulator_enabled:
         # The Admin SDK talks to the local Auth emulator when FIREBASE_AUTH_EMULATOR_HOST is set.
         return firebase_admin.initialize_app(

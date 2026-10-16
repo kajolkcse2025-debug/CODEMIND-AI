@@ -85,7 +85,8 @@ The authenticated user's application record, created on first sight.
 
 ### `POST /profile`
 
-Create the profile (once). `201` with the profile, `409 profile_exists` if one exists.
+Create the profile (once). `201` with the profile, `409 profile_exists` if one exists, including when
+two submissions race (exactly one wins; the other gets 409, never 500).
 Creating the profile sets `onboarding_status` to `complete`.
 
 ### `PUT /profile`

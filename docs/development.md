@@ -20,6 +20,11 @@ See the README quick start. Extra notes:
   override it if your password differs) and `TEST_REDIS_URL` (default database 15).
   They never touch your development database.
 - If `.env` is missing the API refuses to start with a message naming the missing variables.
+- Install Python dependencies with the constraints file: `pip install -e ".[dev]" -c constraints.txt`.
+  Dependencies are otherwise only lower-bounded, and a newer FastAPI/Pydantic changes the exported
+  OpenAPI schema (a test, `test_committed_openapi_schema_matches_the_running_app`, fails when the
+  committed schema is stale). To upgrade on purpose: upgrade, run everything, then
+  `pip freeze --exclude-editable > constraints.txt` (keep the header comment) and `npm run gen:api`.
 
 ## Common tasks
 
@@ -98,5 +103,12 @@ covered by `tests/unit/test_security.py`.
 - **Sign-in page says Firebase is not configured**: fill `apps/web/.env` and restart Vite
   (environment variables are read at startup).
 - **CORS errors in the browser**: add your web origin to `CORS_ALLOWED_ORIGINS` and restart the API.
-- **`npm install` reports a missing package when generating types**: delete `node_modules` and
-  `package-lock.json`, then run `npm install` again.
+- **`EBADENGINE` warnings from `npm install`**: your Node is older than 22.20 (or between 23 and 24.11).
+  Use the version in `.nvmrc`.
+- **`npm run gen:api` fails with "Cannot find package '@redocly/openapi-core'"**: the lockfile was
+  regenerated without the `openapi-typescript` override in the root `package.json` (npm otherwise
+  nests it and skips its dependencies). Restore the override, delete `node_modules` and
+  `package-lock.json`, and run `npm install`.
+- **`test_committed_openapi_schema_matches_the_running_app` fails**: the API contract changed, or
+  your installed FastAPI/Pydantic differ from `constraints.txt`. Reinstall with `-c constraints.txt`,
+  then `npm run gen:api` if the change was intentional.

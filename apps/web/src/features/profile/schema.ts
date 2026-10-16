@@ -9,8 +9,9 @@ import { z } from "zod";
 const GITHUB = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const LEETCODE = /^[A-Za-z0-9_-]{1,40}$/;
 const CODEFORCES = /^[A-Za-z0-9_.-]{3,24}$/;
-const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[\w\-%]{3,100}\/?$/i;
-export const SKILL_PATTERN = /^\w[\w +#.\-/()]*$/;
+// \p{L}\p{N}_ mirrors Python's Unicode-aware \w (JavaScript's \w is ASCII-only).
+const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[\p{L}\p{N}_\-%]{3,100}\/?$/iu;
+export const SKILL_PATTERN = /^[\p{L}\p{N}_][\p{L}\p{N}_ +#.\-/()]*$/u;
 
 export const LANGUAGES = [
   { value: "python", label: "Python" },

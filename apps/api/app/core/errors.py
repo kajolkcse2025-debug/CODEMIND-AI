@@ -164,7 +164,10 @@ async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
     logger.error(
         "unhandled_exception",
         exc_info=exc,
-        extra={"path": request.url.path, "method": request.method},
+        # The request-id context variable is already reset when this handler runs (it executes
+        # outside the request-id middleware), so pass the id explicitly or the log line can't be
+        # matched to the "Reference: <id>" a student sees.
+        extra={"path": request.url.path, "method": request.method, "request_id": rid},
     )
     return error_response(
         500, "internal_error", "Something went wrong on our side.", request_id=rid

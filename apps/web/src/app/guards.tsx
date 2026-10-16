@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { safeRedirectPath } from "@/app/safe-redirect";
 import { useAuth } from "@/features/auth/auth-context";
 import { useMe } from "@/features/me/hooks";
 
@@ -29,8 +30,8 @@ export function PublicOnly() {
   const location = useLocation();
   if (status === "loading") return <FullPageLoading label="Checking your session" />;
   if (status === "authenticated") {
-    const from = (location.state as { from?: string } | null)?.from;
-    return <Navigate to={from && from.startsWith("/") ? from : "/dashboard"} replace />;
+    const from = (location.state as { from?: unknown } | null)?.from;
+    return <Navigate to={safeRedirectPath(from)} replace />;
   }
   return <Outlet />;
 }

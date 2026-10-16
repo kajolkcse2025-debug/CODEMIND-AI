@@ -81,7 +81,7 @@ def engine() -> Iterator[Engine]:
     except Exception as exc:  # pragma: no cover - environment problem, fail loudly
         pytest.fail(
             f"PostgreSQL is not reachable at TEST_DATABASE_URL ({exc.__class__.__name__}). "
-            "Start it with `docker compose up -d postgres` or run `pytest -m 'not db'`.",
+            'Start it with `docker compose up -d postgres` or run `pytest -m "not db and not redis"`.',
             pytrace=False,
         )
     config = Config(str(__import__("pathlib").Path(__file__).parents[1] / "alembic.ini"))

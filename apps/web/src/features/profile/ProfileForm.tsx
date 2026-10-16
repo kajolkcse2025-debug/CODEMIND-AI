@@ -224,7 +224,7 @@ export function ProfileForm({ defaultValues, onSubmit, submitLabel, onSaved }: P
             label="Time zone"
             htmlFor="timezone"
             error={err("timezone")}
-            hint="Your day, and streaks, are based on this."
+            hint="Used to decide when your day starts."
             className="sm:col-span-2"
           >
             <Select {...fieldAria("timezone", err("timezone"), true)} {...register("timezone")}>

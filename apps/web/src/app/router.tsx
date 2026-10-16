@@ -1,4 +1,9 @@
-import { createBrowserRouter, createMemoryRouter, type RouteObject } from "react-router-dom";
+import {
+  createBrowserRouter,
+  createMemoryRouter,
+  type InitialEntry,
+  type RouteObject,
+} from "react-router-dom";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { NotFoundPage } from "@/app/NotFoundPage";
@@ -68,5 +73,5 @@ export const routes: RouteObject[] = [
 ];
 
 export const createAppRouter = () => createBrowserRouter(routes);
-export const createTestRouter = (initialEntries: string[]) =>
+export const createTestRouter = (initialEntries: InitialEntry[]) =>
   createMemoryRouter(routes, { initialEntries });

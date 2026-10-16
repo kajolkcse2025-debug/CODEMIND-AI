@@ -1,5 +1,6 @@
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError
@@ -7,6 +8,13 @@ from app.models.user import Profile, User
 from app.repositories.profile import ProfileRepository
 from app.repositories.user import UserRepository
 from app.schemas.profile import ProfileIn, ProfileOut
+
+
+def _violated_constraint(exc: IntegrityError) -> str | None:
+    """The name of the constraint a PostgreSQL integrity error refers to, if known."""
+    diag = getattr(exc.orig, "diag", None)
+    name = getattr(diag, "constraint_name", None)
+    return name if isinstance(name, str) else None
 
 
 class ProfileService:
@@ -45,7 +53,17 @@ class ProfileService:
             raise ConflictError(
                 "A profile already exists. Use PUT to update it.", code="profile_exists"
             )
-        profile = self._profiles.create(user.id, self._column_values(data))
+        try:
+            profile = self._profiles.create(user.id, self._column_values(data))
+        except IntegrityError as exc:
+            self._session.rollback()
+            # Two simultaneous submissions both passed the check above; the database primary key
+            # decided the winner. That is a normal conflict, not a server error.
+            if _violated_constraint(exc) == "pk_profiles":
+                raise ConflictError(
+                    "A profile already exists. Use PUT to update it.", code="profile_exists"
+                ) from exc
+            raise
         self._profiles.replace_skills(user.id, data.skills)
         # Phase 1: creating the profile is the whole onboarding. Consent capture comes later.
         self._users.set_onboarding_status(user, "complete")

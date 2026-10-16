@@ -84,6 +84,21 @@ describe("route guards", () => {
     expect(router.state.location.pathname).toBe("/dashboard");
   });
 
+  it.each(["//evil.example", "/\\evil.example", "https://evil.example"])(
+    "never redirects off-site after sign-in (state.from=%s)",
+    async (from) => {
+      const { router } = renderRoute("/login", signedIn, { from });
+      expect(await screen.findByRole("heading", { name: /Welcome, Asha/ })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe("/dashboard");
+    },
+  );
+
+  it("returns to the page the student originally asked for", async () => {
+    const { router } = renderRoute("/login", signedIn, { from: "/settings" });
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/settings");
+  });
+
   it("sends signed-in students without a profile to onboarding", async () => {
     meState.value = { ...meState.value, data: me(false) };
     const { router } = renderRoute("/dashboard", signedIn);

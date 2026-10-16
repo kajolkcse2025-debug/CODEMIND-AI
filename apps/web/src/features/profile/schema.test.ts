@@ -121,3 +121,32 @@ describe("profile payload mapping", () => {
     expect(profileCompleteness(profile)).toMatchObject({ filled: 6, total: 9, percent: 67 });
   });
 });
+
+describe("client/server validation parity for non-ASCII input", () => {
+  // Each expectation was verified against the real Pydantic model (apps/api/app/schemas/profile.py).
+  it.each([
+    ["Python", true],
+    ["C++", true],
+    ["Node.js", true],
+    ["_x", true],
+    ["Café", true],
+    ["机器学习", true],
+    ["日本語 NLP", true],
+    ["()", false],
+    ["<script>", false],
+    ["x".repeat(41), false],
+  ])("skill %j accepted=%s", (skill, accepted) => {
+    expect(profileSchema.safeParse(valid({ skills: [skill] })).success).toBe(accepted);
+  });
+
+  it("accepts a LinkedIn slug with accented letters, like the server", () => {
+    expect(
+      profileSchema.safeParse(valid({ linkedin_url: "https://linkedin.com/in/josé-m" })).success,
+    ).toBe(true);
+    expect(
+      profileSchema.safeParse(
+        valid({ linkedin_url: "https://linkedin.com.evil.example/in/josé-m" }),
+      ).success,
+    ).toBe(false);
+  });
+});
