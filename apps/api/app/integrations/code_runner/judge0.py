@@ -44,19 +44,17 @@ class Judge0Runner:
         self.client = client
         self.poll_interval_sec = poll_interval_sec
         self.max_poll_attempts = max_poll_attempts
+
     def close(self) -> None:
         """Close the HTTP client if it is still open."""
         if self.client is not None:
             self.client.close()
             self.client = None
-    
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-
         if self.api_key:
-            headers["X-RapidAPI-Key"] = self.api_key
-
+            headers["X-Auth-Token"] = self.api_key
         return headers
 
     def _submit(
@@ -220,6 +218,8 @@ class Judge0Runner:
                     )
 
                 if verdict == Verdict.RUNNER_UNAVAILABLE:
+                    status = data.get("status") or {}
+                    description = status.get("description") or "Unknown status"
                     return RunResult(
                         verdict=verdict,
                         verified=False,
@@ -228,7 +228,7 @@ class Judge0Runner:
                         failed_test_tags=tuple(failed_test_tags),
                         max_time_ms=max_time_ms,
                         max_memory_kb=max_memory_kb,
-                        detail="Judge0 could not complete the submission.",
+                        detail=f"Judge0 status: {description}",
                     )
 
                 if verdict != Verdict.ACCEPTED:
@@ -236,6 +236,18 @@ class Judge0Runner:
                         failed_test_tags.extend(test_case.tags)
                     else:
                         failed_test_tags.append(f"test_{index}")
+
+                    detail = (
+                        "Your code could not complete successfully. "
+                        "Check your code and try again."
+                        if verdict in (
+                            Verdict.RUNTIME_ERROR,
+                            Verdict.COMPILE_ERROR,
+                            Verdict.TIME_LIMIT,
+                            Verdict.MEMORY_LIMIT,
+                        )
+                        else "Some tests did not pass. Review your code and try again."
+                    )
 
                     return RunResult(
                         verdict=verdict,
@@ -245,19 +257,7 @@ class Judge0Runner:
                         failed_test_tags=tuple(failed_test_tags),
                         max_time_ms=max_time_ms,
                         max_memory_kb=max_memory_kb,
-                        detail=(
-                            "Your code could not complete successfully. "
-                            "Check your code and try again."
-                            if verdict
-                            in (
-                                Verdict.RUNTIME_ERROR,
-                                Verdict.COMPILE_ERROR,
-                                Verdict.TIME_LIMIT,
-                                Verdict.MEMORY_LIMIT,
-                            )
-                            else "Some tests did not pass. "
-                            "Review your code and try again."
-                        ),
+                        detail=detail,
                     )
 
                 actual = self._normalise_output(data.get("stdout"))
@@ -287,13 +287,25 @@ class Judge0Runner:
 
                 tests_passed += 1
 
+            return RunResult(
+                verdict=Verdict.ACCEPTED,
+                verified=True,
+                tests_passed=tests_passed,
+                tests_total=len(request.test_cases),
+                failed_test_tags=tuple(failed_test_tags),
+                max_time_ms=max_time_ms,
+                max_memory_kb=max_memory_kb,
+                detail="All tests passed.",
+            )
+
         except (
             httpx.HTTPError,
             ValueError,
             KeyError,
             TypeError,
             TimeoutError,
-        ):
+        ) as exc:
+            # Report only the exception type; never expose request headers or secrets.
             return RunResult(
                 verdict=Verdict.RUNNER_UNAVAILABLE,
                 verified=False,
@@ -302,32 +314,26 @@ class Judge0Runner:
                 failed_test_tags=tuple(failed_test_tags),
                 max_time_ms=max_time_ms,
                 max_memory_kb=max_memory_kb,
-                detail=(
-                    "The code execution service is temporarily unavailable."
-                ),
+                detail=f"Runner error: {type(exc).__name__}",
             )
+
         finally:
             # Only close clients created by this runner.
             if self.client is None:
                 client.close()
 
-        return RunResult(
-            verdict=Verdict.ACCEPTED,
-            verified=True,
-            tests_passed=tests_passed,
-            tests_total=len(request.test_cases),
-            failed_test_tags=(),
-            max_time_ms=max_time_ms,
-            max_memory_kb=max_memory_kb,
-            detail="All tests passed.",
-        )
-
 
 def build_judge0_runner() -> Judge0Runner:
     settings = get_settings()
+    configured_key = settings.judge0_api_key
+    api_key = (
+        configured_key.get_secret_value()
+        if configured_key
+        else ""
+    )
 
     return Judge0Runner(
-        base_url=settings.judge0_base_url,
-        api_key=getattr(settings, "judge0_api_key", ""),
-        timeout_sec=getattr(settings, "judge0_timeout_sec", 60),
+        base_url=settings.judge0_base_url or "",
+        api_key=api_key,
+        timeout_sec=settings.judge0_timeout_sec,
     )
