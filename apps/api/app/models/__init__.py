@@ -2,7 +2,7 @@
 
 from app.models.activity import CodeSubmission, CodingAttempt, DetectedError
 from app.models.ai import AiConversation
-from app.models.content import Problem, ProblemTopic, Topic
+from app.models.content import Problem, ProblemTestCase, ProblemTopic, Topic
 from app.models.gamification import Achievement, UserAchievement
 from app.models.intelligence import (
     CodingDnaTrait,
@@ -34,6 +34,7 @@ __all__ = [
     "InterviewSession",
     "MissionItem",
     "Problem",
+    "ProblemTestCase",
     "ProblemTopic",
     "Profile",
     "Roadmap",

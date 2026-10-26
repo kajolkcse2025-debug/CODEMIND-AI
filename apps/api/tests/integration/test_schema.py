@@ -26,6 +26,7 @@ EXPECTED_TABLES = {
     "topic_performance", "coding_dna", "roadmaps", "roadmap_items", "daily_missions",
     "mission_items", "interview_sessions", "interview_questions", "interview_responses",
     "interview_scores", "achievements", "user_achievements", "streaks", "ai_conversations",
+    "problem_test_cases",
 }  # fmt: skip
 
 

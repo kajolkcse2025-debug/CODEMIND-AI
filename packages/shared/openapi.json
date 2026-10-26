@@ -48,6 +48,19 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -99,6 +112,149 @@
           "flags"
         ],
         "title": "MeResponse",
+        "type": "object"
+      },
+      "ProblemDetail": {
+        "properties": {
+          "constraints_md": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints Md"
+          },
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "expected_time_sec": {
+            "title": "Expected Time Sec",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starter_code": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Code"
+          },
+          "statement_md": {
+            "title": "Statement Md",
+            "type": "string"
+          },
+          "technique_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Technique Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "difficulty",
+          "expected_time_sec",
+          "technique_tags",
+          "statement_md",
+          "constraints_md",
+          "starter_code"
+        ],
+        "title": "ProblemDetail",
+        "type": "object"
+      },
+      "ProblemListItem": {
+        "properties": {
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "expected_time_sec": {
+            "title": "Expected Time Sec",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "technique_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Technique Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "difficulty",
+          "expected_time_sec",
+          "technique_tags"
+        ],
+        "title": "ProblemListItem",
+        "type": "object"
+      },
+      "ProblemListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProblemListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset"
+        ],
+        "title": "ProblemListResponse",
         "type": "object"
       },
       "ProfileIn": {
@@ -527,6 +683,81 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "SubmissionCreate": {
+        "properties": {
+          "language": {
+            "enum": [
+              "python",
+              "java",
+              "cpp"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "source_code": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Source Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "source_code"
+        ],
+        "title": "SubmissionCreate",
+        "type": "object"
+      },
+      "SubmissionResult": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "tests_passed": {
+            "minimum": 0.0,
+            "title": "Tests Passed",
+            "type": "integer"
+          },
+          "tests_total": {
+            "minimum": 0.0,
+            "title": "Tests Total",
+            "type": "integer"
+          },
+          "verdict": {
+            "enum": [
+              "accepted",
+              "wrong_answer",
+              "runtime_error",
+              "time_limit",
+              "memory_limit",
+              "compile_error",
+              "runner_unavailable"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "verdict",
+          "verified",
+          "tests_passed",
+          "tests_total"
+        ],
+        "title": "SubmissionResult",
+        "type": "object"
+      },
       "UserOut": {
         "properties": {
           "assessment_status": {
@@ -595,6 +826,46 @@
         ],
         "title": "UserOut",
         "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -610,6 +881,121 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/coding-assessment/health": {
+      "get": {
+        "description": "Check whether the coding assessment bank is available.",
+        "operationId": "coding_assessment_health_api_v1_coding_assessment_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Coding Assessment Health",
+        "tags": [
+          "Coding Assessment"
+        ]
+      }
+    },
+    "/api/v1/coding-assessment/questions": {
+      "get": {
+        "description": "Return a selected set of coding assessment questions.",
+        "operationId": "get_assessment_questions_api_v1_coding_assessment_questions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "count",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 8,
+              "minimum": 1,
+              "title": "Count",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Assessment Questions",
+        "tags": [
+          "Coding Assessment"
+        ]
+      }
+    },
+    "/api/v1/coding-assessment/{slug}/submit": {
+      "post": {
+        "description": "Run a student's code against an assessment question.",
+        "operationId": "submit_assessment_code_api_v1_coding_assessment__slug__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Assessment Code",
+        "tags": [
+          "Coding Assessment"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_api_v1_health_get",
@@ -705,6 +1091,172 @@
         "summary": "The authenticated user's application record",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/problems": {
+      "get": {
+        "operationId": "list_problems_api_v1_problems_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "difficulty",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Difficulty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Problems",
+        "tags": [
+          "problems"
+        ]
+      }
+    },
+    "/api/v1/problems/{slug}": {
+      "get": {
+        "operationId": "get_problem_api_v1_problems__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Problem",
+        "tags": [
+          "problems"
+        ]
+      }
+    },
+    "/api/v1/problems/{slug}/submissions": {
+      "post": {
+        "operationId": "submit_code_api_v1_problems__slug__submissions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Code",
+        "tags": [
+          "problems"
         ]
       }
     },
@@ -804,7 +1356,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "security": [
@@ -868,7 +1420,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "security": [

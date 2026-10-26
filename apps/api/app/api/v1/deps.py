@@ -3,6 +3,8 @@
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+from app.repositories.problems import ProblemsRepository
+from app.services.problems_service import ProblemsService
 
 from app.core.errors import UnauthenticatedError
 from app.core.redis import KeyValueStore, get_store
@@ -63,3 +65,7 @@ def get_current_user(
 ) -> User:
     """The authenticated application user, derived solely from the verified token."""
     return users.provision(Identity(token.uid, token.email, token.name))
+def get_problems_service(
+    session: Session = Depends(get_db),
+) -> ProblemsService:
+    return ProblemsService(ProblemsRepository(session))

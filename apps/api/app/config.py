@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     ai_model_fast: str | None = None
     ai_model_strong: str | None = None
+    # Code execution through an external sandbox (Judge0).
+    judge0_base_url: str | None = None
+    judge0_api_key: SecretStr | None = None
+    judge0_timeout_sec: int = 15
 
     @field_validator(
         "firebase_project_id",

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Numeric,
     SmallInteger,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
@@ -109,3 +110,33 @@ class ProblemTopic(Base):
         SmallInteger, ForeignKey("topics.id", ondelete="RESTRICT"), primary_key=True, index=True
     )
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+class ProblemTestCase(Base):
+    """Input/output test case used to verify a coding problem."""
+
+    __tablename__ = "problem_test_cases"
+    __table_args__ = (
+        UniqueConstraint(
+            "problem_id",
+            "problem_version",
+            "case_index",
+            name="problem_version_case_index",
+        ),
+        CheckConstraint("problem_version >= 1", name="version_positive"),
+        CheckConstraint("case_index >= 1", name="case_index_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    problem_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("problems.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    problem_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    case_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    stdin: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_stdout: Mapped[str] = mapped_column(Text, nullable=False)
+    is_hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
+    created_at: Mapped[datetime] = created_at_col()

@@ -45,5 +45,16 @@ def test_verified_accepted_result_counts() -> None:
     assert RunResult(verdict=Verdict.ACCEPTED, verified=True).counts_toward_metrics is True
 
 
-def test_factory_returns_the_fake_runner_in_phase_one() -> None:
+
+def test_factory_returns_the_fake_runner_when_judge0_is_not_configured(
+    monkeypatch,
+) -> None:
+    from app.config import get_settings
+
+    monkeypatch.setattr(
+        get_settings(),
+        "judge0_base_url",
+        None,
+    )
+
     assert isinstance(build_code_runner(), FakeCodeRunner)

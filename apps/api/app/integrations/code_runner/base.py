@@ -48,10 +48,12 @@ class RunResult:
     max_memory_kb: int | None = None
     detail: str | None = None
 
+
     @property
     def counts_toward_metrics(self) -> bool:
-        """False for anything unverified. Mastery, XP, DNA and readiness must check this."""
-        return self.verified and self.verdict is not Verdict.RUNNER_UNAVAILABLE
+        """Only verified, fully accepted submissions count toward mastery metrics."""
+        return self.verified and self.verdict is Verdict.ACCEPTED
+
 
 
 class CodeRunner(Protocol):

@@ -9,7 +9,16 @@ from app.integrations.code_runner.fake import FakeCodeRunner
 
 
 def build_code_runner() -> CodeRunner:
-    """Phase 1 has only the fake runner. Judge0 replaces it behind this same factory."""
+    """Use Judge0 when configured; otherwise use the safe fake runner."""
+    from app.config import get_settings
+
+    settings = get_settings()
+
+    if settings.judge0_base_url:
+        from app.integrations.code_runner.judge0 import build_judge0_runner
+
+        return build_judge0_runner()
+
     return FakeCodeRunner()
 
 

@@ -24,6 +24,8 @@ import { OnboardingPage } from "@/features/profile/OnboardingPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 import { RoadmapPage } from "@/features/roadmap/RoadmapPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { CodingProblemPage } from "@/features/coding-coach/CodingProblemPage";
+
 
 export const routes: RouteObject[] = [
   {
@@ -54,6 +56,7 @@ export const routes: RouteObject[] = [
                   { path: "/dashboard", element: <DashboardPage /> },
                   { path: "/assessment", element: <AssessmentPage /> },
                   { path: "/coding-coach", element: <CodingCoachPage /> },
+                  { path: "/coding-coach/:slug", element: <CodingProblemPage /> },
                   { path: "/roadmap", element: <RoadmapPage /> },
                   { path: "/missions", element: <MissionsPage /> },
                   { path: "/analytics", element: <AnalyticsPage /> },
