@@ -133,6 +133,45 @@ PROBLEMS = [
             ("1\n42\n", "42\n"),
         ],
     },
+    {
+        "slug": "assessment-two-sum",
+        "title": "Two Sum",
+        "statement_md": (
+            "## Problem\n"
+            "Given an array of integers and a target, find the indices "
+            "of two distinct elements whose sum equals the target.\n\n"
+            "Print the two indices in ascending order. Exactly one valid "
+            "pair exists.\n\n"
+            "### Example\n"
+            "Input:\n"
+            "`4`\n`2 7 11 15`\n`9`\n\n"
+            "Output: `0 1`"
+        ),
+        "constraints_md": (
+            "2 <= n <= 100000. "
+            "Array elements and target are integers."
+        ),
+        "difficulty": "medium",
+        "expected_time_sec": 900,
+        "optimal_time_complexity": "O(n)",
+        "optimal_space_complexity": "O(n)",
+        "technique_tags": ["arrays", "hash-map", "complement-search"],
+        "topic_slug": "arrays",
+        "starter_code": {
+            "python": (
+                "n = int(input())\n"
+                "nums = list(map(int, input().split()))\n"
+                "target = int(input())\n"
+                "# Write your code below\n"
+            )
+        },
+        "tests": [
+            ("4\n2 7 11 15\n9\n", "0 1\n"),
+            ("3\n3 2 4\n6\n", "1 2\n"),
+            ("4\n3 3 2 4\n6\n", "0 1\n"),
+            ("4\n-1 -2 -3 -4\n-6\n", "1 3\n"),
+        ],
+    },
 ]
 
 
@@ -141,14 +180,19 @@ def seed_problems() -> None:
 
     with session_factory() as session:
         try:
-            # Check that every topic already exists before adding anything.
+            # Check that every topic already exists.
             topic_slugs = {p["topic_slug"] for p in PROBLEMS}
+
             topics = session.scalars(
                 select(Topic).where(Topic.slug.in_(topic_slugs))
             ).all()
-            topics_by_slug = {topic.slug: topic for topic in topics}
+
+            topics_by_slug = {
+                topic.slug: topic for topic in topics
+            }
 
             missing = topic_slugs - topics_by_slug.keys()
+
             if missing:
                 raise RuntimeError(
                     "These topics do not exist in the database: "
@@ -158,7 +202,9 @@ def seed_problems() -> None:
 
             for data in PROBLEMS:
                 existing = session.scalar(
-                    select(Problem).where(Problem.slug == data["slug"])
+                    select(Problem).where(
+                        Problem.slug == data["slug"]
+                    )
                 )
 
                 if existing:
@@ -180,10 +226,12 @@ def seed_problems() -> None:
                     version=1,
                     is_diagnostic=False,
                 )
+
                 session.add(problem)
                 session.flush()
 
                 topic = topics_by_slug[data["topic_slug"]]
+
                 session.add(
                     ProblemTopic(
                         problem_id=problem.id,

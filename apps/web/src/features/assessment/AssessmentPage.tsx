@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   AlertCircle,
@@ -14,6 +14,8 @@ import {
   RotateCcw,
   Terminal,
   BarChart3,
+  Clock,
+  Trophy,
 } from "lucide-react";
 
 import {
@@ -23,7 +25,11 @@ import {
   type AssessmentSubmissionResult,
 } from "@/lib/api/codingAssessment";
 
+import { saveAssessmentResult } from "./assessmentHistory";
+
 type AssessmentLanguage = "python" | "java" | "cpp";
+
+const ASSESSMENT_DURATION = 30 * 60;
 
 const starterCode: Record<AssessmentLanguage, string> = {
   python: `# Write your Python solution here
@@ -65,6 +71,13 @@ function isAccepted(result: AssessmentSubmissionResult | null): boolean {
   );
 }
 
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+}
+
 export function AssessmentPage() {
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -86,6 +99,13 @@ export function AssessmentPage() {
   const [error, setError] = useState("");
   const [runMessage, setRunMessage] = useState("");
 
+  const [isFinished, setIsFinished] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] =
+    useState(ASSESSMENT_DURATION);
+
+  const startedAtRef = useRef(Date.now());
+  const savedRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -98,6 +118,7 @@ export function AssessmentPage() {
 
         if (!cancelled) {
           setQuestions(response.questions);
+          startedAtRef.current = Date.now();
         }
       } catch (err) {
         if (!cancelled) {
@@ -136,7 +157,6 @@ export function AssessmentPage() {
     ? resultsByQuestion[`${question.slug}:${language}`] ?? null
     : null;
 
-  // A question is attempted if at least one language has a verified result.
   const verifiedQuestionSlugs = new Set(
     Object.values(resultsByQuestion)
       .filter((result) => result.verified)
@@ -145,16 +165,10 @@ export function AssessmentPage() {
 
   const acceptedQuestionSlugs = new Set(
     Object.values(resultsByQuestion)
-      .filter(
-        (result) =>
-          result.verified &&
-          result.counts_toward_metrics &&
-          result.verdict === "accepted",
-      )
+      .filter(isAccepted)
       .map((result) => result.question_slug),
   );
 
-  // Totals below represent stored submission results, not an official grade.
   const verifiedResults = Object.values(resultsByQuestion).filter(
     (result) => result.verified,
   );
@@ -174,8 +188,19 @@ export function AssessmentPage() {
     0,
   );
 
+  // Timer runs only after questions have loaded.
+  useEffect(() => {
+    if (loading || isFinished || questions.length === 0) return;
+
+    const timer = window.setInterval(() => {
+      setRemainingSeconds((previous) => Math.max(0, previous - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [loading, isFinished, questions.length]);
+
   function handleCodeChange(value: string) {
-    if (!question) return;
+    if (!question || isFinished) return;
 
     setCodeByQuestion((previous) => ({
       ...previous,
@@ -186,13 +211,15 @@ export function AssessmentPage() {
   }
 
   function handleLanguageChange(nextLanguage: AssessmentLanguage) {
+    if (isFinished) return;
+
     setLanguage(nextLanguage);
     setRunMessage("");
     setError("");
   }
 
   function handleReset() {
-    if (!question) return;
+    if (!question || isFinished || submitting) return;
 
     setCodeByQuestion((previous) => {
       const updated = { ...previous };
@@ -211,7 +238,7 @@ export function AssessmentPage() {
   }
 
   async function handleSubmit() {
-    if (!question || submitting) return;
+    if (!question || submitting || isFinished) return;
 
     setSubmitting(true);
     setError("");
@@ -241,8 +268,96 @@ export function AssessmentPage() {
     }
   }
 
+  function finishAssessment() {
+    if (isFinished || submitting || questions.length === 0) return;
+
+    const acceptedCount = questions.filter((item) =>
+      acceptedQuestionSlugs.has(item.slug),
+    ).length;
+
+    const score = Math.round(
+      (acceptedCount / questions.length) * 100,
+    );
+
+    const topicMap = new Map<
+      string,
+      { correct: number; total: number }
+    >();
+
+    for (const item of questions) {
+      const current = topicMap.get(item.topic) ?? {
+        correct: 0,
+        total: 0,
+      };
+
+      current.total += 1;
+
+      if (acceptedQuestionSlugs.has(item.slug)) {
+        current.correct += 1;
+      }
+
+      topicMap.set(item.topic, current);
+    }
+
+    const topicScores = Array.from(topicMap.entries()).map(
+      ([topic, values]) => ({
+        topic,
+        correct: values.correct,
+        total: values.total,
+      }),
+    );
+
+    const durationSeconds = Math.min(
+      ASSESSMENT_DURATION,
+      Math.max(
+        0,
+        Math.floor((Date.now() - startedAtRef.current) / 1000),
+      ),
+    );
+
+    if (!savedRef.current) {
+      try {
+        saveAssessmentResult({
+          score,
+          totalQuestions: questions.length,
+          correctAnswers: acceptedCount,
+          durationSeconds,
+          topicScores,
+        });
+
+        savedRef.current = true;
+      } catch {
+        setError(
+          "Assessment finished, but history could not be saved in this browser.",
+        );
+      }
+    }
+
+    setIsFinished(true);
+    setShowSummary(true);
+    setRunMessage("");
+  }
+
+  // Automatically finish when the timer reaches zero.
+  useEffect(() => {
+    if (
+      remainingSeconds === 0 &&
+      !isFinished &&
+      !submitting &&
+      questions.length > 0
+    ) {
+      finishAssessment();
+    }
+  }, [remainingSeconds, isFinished, submitting, questions.length]);
+
   function goToQuestion(index: number) {
-    if (index < 0 || index >= questions.length) return;
+    if (
+      index < 0 ||
+      index >= questions.length ||
+      isFinished
+    ) {
+      return;
+    }
 
     setCurrentIndex(index);
     setRunMessage("");
@@ -250,7 +365,7 @@ export function AssessmentPage() {
   }
 
   function toggleReviewMark() {
-    if (!question) return;
+    if (!question || isFinished) return;
 
     setMarkedForReview((previous) =>
       previous.includes(question.slug)
@@ -310,7 +425,6 @@ export function AssessmentPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
-      {/* Page heading */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -319,11 +433,13 @@ export function AssessmentPage() {
           </div>
 
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-            Practice and improve
+            {isFinished ? "Assessment completed" : "Practice and improve"}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Solve coding problems, submit solutions, and track your progress.
+            {isFinished
+              ? "Your assessment result has been saved to your history."
+              : "Solve coding problems, submit solutions, and track your progress."}
           </p>
         </div>
 
@@ -331,6 +447,17 @@ export function AssessmentPage() {
           <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
             <BookOpen className="h-4 w-4 text-gray-500" />
             Question {currentIndex + 1} of {questions.length}
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+              remainingSeconds <= 300 && !isFinished
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-gray-200 bg-white text-gray-700"
+            }`}
+          >
+            <Clock className="h-4 w-4" />
+            {isFinished ? "Finished" : formatTime(remainingSeconds)}
           </div>
 
           <button
@@ -341,10 +468,62 @@ export function AssessmentPage() {
             <BarChart3 className="h-4 w-4" />
             {showSummary ? "Hide summary" : "View summary"}
           </button>
+
+          {!isFinished && (
+            <button
+              type="button"
+              onClick={finishAssessment}
+              disabled={submitting}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              Finish assessment
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Progress */}
+      {isFinished && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-7 w-7 text-emerald-700" />
+            <div>
+              <h2 className="text-xl font-bold text-emerald-900">
+                Assessment completed!
+              </h2>
+              <p className="mt-1 text-sm text-emerald-800">
+                Your results have been saved in this browser.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-sm text-gray-500">Score</p>
+              <p className="mt-1 text-3xl font-bold text-gray-900">
+                {Math.round(
+                  (acceptedQuestionSlugs.size / questions.length) * 100,
+                )}
+                %
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-sm text-gray-500">Accepted questions</p>
+              <p className="mt-1 text-3xl font-bold text-gray-900">
+                {acceptedQuestionSlugs.size}/{questions.length}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-white p-4">
+              <p className="text-sm text-gray-500">Verified questions</p>
+              <p className="mt-1 text-3xl font-bold text-gray-900">
+                {verifiedQuestionSlugs.size}/{questions.length}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -365,14 +544,7 @@ export function AssessmentPage() {
           </p>
         </div>
 
-        <div
-          className="h-2 overflow-hidden rounded-full bg-gray-100"
-          role="progressbar"
-          aria-label="Verified question progress"
-          aria-valuemin={0}
-          aria-valuemax={questions.length}
-          aria-valuenow={verifiedQuestionSlugs.size}
-        >
+        <div className="h-2 overflow-hidden rounded-full bg-gray-100">
           <div
             className="h-full rounded-full bg-blue-600 transition-all"
             style={{
@@ -392,27 +564,28 @@ export function AssessmentPage() {
                 key={item.slug}
                 type="button"
                 onClick={() => goToQuestion(index)}
+                disabled={isFinished}
                 className={`relative flex h-11 min-w-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition ${
                   isCurrent
                     ? "border-blue-600 bg-blue-600 text-white"
                     : isVerified
-                      ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-label={`Go to question ${index + 1}: ${item.title}${
-                  isVerified ? ", verified submission" : ""
-                }${needsReview ? ", marked for review" : ""}`}
-                aria-current={isCurrent ? "step" : undefined}
-                title={`${item.title}${needsReview ? " — Marked for review" : ""}`}
+                      ? "border-green-200 bg-green-50 text-green-700"
+                      : "border-gray-200 bg-white text-gray-700"
+                } disabled:cursor-default`}
+                aria-label={`Go to question ${index + 1}: ${item.title}`}
               >
                 {index + 1}
+
                 {isVerified && (
                   <CheckCircle2
                     className={`absolute -right-1 -top-1 h-4 w-4 rounded-full ${
-                      isCurrent ? "bg-blue-600 text-white" : "bg-white text-green-600"
+                      isCurrent
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-green-600"
                     }`}
                   />
                 )}
+
                 {needsReview && (
                   <Flag className="absolute -bottom-1 -right-1 h-3.5 w-3.5 fill-amber-400 text-amber-600" />
                 )}
@@ -420,32 +593,17 @@ export function AssessmentPage() {
             );
           })}
         </div>
-
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-blue-600" />
-            Current
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-green-200" />
-            Verified submission
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Flag className="h-3.5 w-3.5 text-amber-600" />
-            Marked for review
-          </span>
-        </div>
       </section>
 
-      {/* Session summary */}
       {showSummary && (
         <section className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="text-lg font-bold text-gray-900">
             Session summary
           </h2>
+
           <p className="mt-1 text-sm text-gray-500">
-            Based on the latest stored result for each question and language.
-            This is not an official assessment grade.
+            Based on verified code submissions. An accepted solution is counted
+            once per question.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -480,6 +638,7 @@ export function AssessmentPage() {
             <p className="text-sm font-semibold text-gray-800">
               Verified submission details
             </p>
+
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <p className="text-xs text-gray-500">Accepted submissions</p>
@@ -487,12 +646,14 @@ export function AssessmentPage() {
                   {acceptedSubmissions}
                 </p>
               </div>
+
               <div>
                 <p className="text-xs text-gray-500">Test cases passed</p>
                 <p className="mt-1 text-lg font-semibold">
                   {totalTestsPassed} / {totalTestsRun}
                 </p>
               </div>
+
               <div>
                 <p className="text-xs text-gray-500">Verified submissions</p>
                 <p className="mt-1 text-lg font-semibold">
@@ -504,9 +665,7 @@ export function AssessmentPage() {
         </section>
       )}
 
-      {/* Question and editor */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-        {/* Problem panel */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="border-b border-gray-200 p-5">
             <div className="flex flex-wrap items-center gap-2">
@@ -548,6 +707,7 @@ export function AssessmentPage() {
               <h3 className="mb-2 font-semibold text-gray-900">
                 Problem statement
               </h3>
+
               <div className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
                 {question.statement}
               </div>
@@ -555,7 +715,9 @@ export function AssessmentPage() {
 
             {examples.length > 0 && (
               <section>
-                <h3 className="mb-3 font-semibold text-gray-900">Examples</h3>
+                <h3 className="mb-3 font-semibold text-gray-900">
+                  Examples
+                </h3>
 
                 <div className="space-y-3">
                   {examples.map((example, index) => (
@@ -626,12 +788,11 @@ export function AssessmentPage() {
             </section>
           </div>
 
-          {/* Question navigation */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 p-4">
             <button
               type="button"
               onClick={() => goToQuestion(currentIndex - 1)}
-              disabled={currentIndex === 0}
+              disabled={currentIndex === 0 || isFinished}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -641,11 +802,8 @@ export function AssessmentPage() {
             <button
               type="button"
               onClick={toggleReviewMark}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                isMarked
-                  ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                  : "border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
+              disabled={isFinished}
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:opacity-40"
             >
               <Flag className="h-4 w-4" />
               {isMarked ? "Remove review mark" : "Mark for review"}
@@ -654,7 +812,9 @@ export function AssessmentPage() {
             <button
               type="button"
               onClick={() => goToQuestion(currentIndex + 1)}
-              disabled={currentIndex === questions.length - 1}
+              disabled={
+                currentIndex === questions.length - 1 || isFinished
+              }
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
@@ -663,7 +823,6 @@ export function AssessmentPage() {
           </div>
         </section>
 
-        {/* Code editor panel */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
             <div className="flex items-center gap-2">
@@ -675,12 +834,13 @@ export function AssessmentPage() {
               <span className="text-gray-500">Language</span>
               <select
                 value={language}
+                disabled={isFinished}
                 onChange={(event) =>
                   handleLanguageChange(
                     event.target.value as AssessmentLanguage,
                   )
                 }
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
               >
                 <option value="python">Python</option>
                 <option value="java">Java</option>
@@ -692,17 +852,12 @@ export function AssessmentPage() {
           <div className="overflow-hidden bg-[#1e1e1e]">
             <Editor
               height="420px"
-              language={
-                language === "cpp"
-                  ? "cpp"
-                  : language === "java"
-                    ? "java"
-                    : "python"
-              }
+              language={language === "cpp" ? "cpp" : language}
               theme="vs-dark"
               value={sourceCode}
               onChange={(value) => handleCodeChange(value ?? "")}
               options={{
+                readOnly: isFinished,
                 automaticLayout: true,
                 autoIndent: "full",
                 formatOnPaste: true,
@@ -728,7 +883,7 @@ export function AssessmentPage() {
             <button
               type="button"
               onClick={handleReset}
-              disabled={submitting}
+              disabled={submitting || isFinished}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCcw className="h-4 w-4" />
@@ -738,7 +893,7 @@ export function AssessmentPage() {
             <button
               type="button"
               onClick={() => void handleSubmit()}
-              disabled={submitting}
+              disabled={submitting || isFinished}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
@@ -765,7 +920,6 @@ export function AssessmentPage() {
             </div>
           )}
 
-          {/* Submission result */}
           {currentResult && (
             <div className="border-t border-gray-200 p-4">
               <div className="mb-4 flex flex-wrap items-center gap-2">

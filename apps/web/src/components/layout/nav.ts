@@ -22,7 +22,7 @@ export interface NavItem {
 
 export const primaryNav: NavItem[] = [
   { to: "/dashboard", label: "Today", icon: LayoutDashboard },
-  { to: "/assessment", label: "Assessment", icon: Target, soon: true },
+  { to: "/assessment", label: "Assessment", icon: Target },
   { to: "/coding-coach", label: "Coding coach", icon: Brain, soon: true },
   { to: "/roadmap", label: "Roadmap", icon: Route, soon: true },
   { to: "/missions", label: "Missions", icon: ListChecks, soon: true },

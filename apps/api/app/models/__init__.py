@@ -1,7 +1,7 @@
 """Import every model so ``Base.metadata`` is complete (Alembic and tests rely on this)."""
 
 from app.models.activity import CodeSubmission, CodingAttempt, DetectedError
-from app.models.ai import AiConversation
+from app.models.ai import AiConversation, AiMessage
 from app.models.content import Problem, ProblemTestCase, ProblemTopic, Topic
 from app.models.gamification import Achievement, UserAchievement
 from app.models.intelligence import (
@@ -22,6 +22,7 @@ from app.models.user import Profile, Skill, User, UserSkill
 __all__ = [
     "Achievement",
     "AiConversation",
+    "AiMessage",
     "CodeSubmission",
     "CodingAttempt",
     "CodingDnaTrait",
